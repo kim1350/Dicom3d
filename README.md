@@ -9,4 +9,4 @@
 - http://dgobbi.github.io/vtk-dicom/doc/vtk-dicom.pdf -http://dgobbi.github.io/vtk-dicom/
 - https://github.com/dgobbi/vtk-dicom
 
-![](https://github.com/kim1350/img/bone_example.png)
+![alt text](https://github.com/kim1350/img/bone_example.png?raw=true)
