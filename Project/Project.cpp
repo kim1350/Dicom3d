@@ -24,18 +24,37 @@ VTK_MODULE_INIT(vtkRenderingFreeType)
 #include <vtkImageData.h>
 #include <vtkSmoothPolyDataFilter.h>
 #include <vtkImageThreshold.h>
-
+#include <vtkAlgorithm.h>
+#include <vtkObject.h>
+#include <vtkCallbackCommand.h>
 
 #include "ReadDicom.h"
 #include <array>
+using namespace std;
+
+void myVtkProgressCallback(vtkObject* caller, long unsigned int /*eventId*/, void* /*clientData*/, void* /*callData*/)
+{
+    // display progress in terminal
+    vtkAlgorithm* filter = static_cast<vtkAlgorithm*>(caller);
+    if (filter->GetProgress() == 0) {
+        cout << filter->GetClassName() << " progress:"<<endl;
+        
+    }
+    if (filter->GetProgress() > 0.999)
+        cout << "100% done!"<<endl;
+    else
+        cout <<fixed << setprecision(1) << filter->GetProgress() * 100 << "%..";
+    cout <<flush;
+}
+
+
 int main(int argc, char* argv[])
 {
-    using namespace std;
-    cout << "write -h for help";
+    cout << "write -h for help" << endl << endl;
     if (argc < 4 or argv[0]=="-h")
     {
         cout << "Usage: " << argv[0] << endl;
-        cout << "Minimum example. Using a default iso value of 400 (shows bone)" << endl;
+        cout << "Minimum example. Using a default iso value of 500 (shows bone)" << endl;
         cout << "project -p E:\\dicompath -o test.stl" << endl;
         cout << "1) -p path to Dicom directory"<<endl;
         cout << "2) -mv iso value main" << endl;
@@ -72,7 +91,7 @@ int main(int argc, char* argv[])
             a++;
             if (a < argc)
             {
-                mainValue = int(argv[a]);
+                mainValue = atoi(argv[a]);
             }
             else
             {
@@ -85,7 +104,7 @@ int main(int argc, char* argv[])
             a++;
             if (a < argc)
             {
-                upValue = int(argv[a]);
+                upValue = atoi(argv[a]);
             }
             else
             {
@@ -98,7 +117,7 @@ int main(int argc, char* argv[])
             a++;
             if (a < argc)
             {
-                smoothIter = int(argv[a]);
+                smoothIter = atoi(argv[a]);
             }
             else
             {
@@ -120,6 +139,8 @@ int main(int argc, char* argv[])
             }
         }
     }
+    vtkNew<vtkCallbackCommand> m_vtkCallback;
+    m_vtkCallback->SetCallback(myVtkProgressCallback);
 
     ReadDicom read;
     ////TUT
@@ -159,18 +180,27 @@ int main(int argc, char* argv[])
     }
 
     vtkNew<vtkFlyingEdges3D> skinExtractor;
+    if (m_vtkCallback.Get() != NULL)
+    {
+        skinExtractor->AddObserver(vtkCommand::ProgressEvent, m_vtkCallback);
+    }
     skinExtractor->SetInputData(reader);
     skinExtractor->SetValue(0, mainValue);
-
+   
     vtkNew<vtkSmoothPolyDataFilter> smoother;
+    if (m_vtkCallback.Get() != NULL)
+    {
+        smoother->AddObserver(vtkCommand::ProgressEvent, m_vtkCallback);
+    }
     smoother->SetInputConnection(skinExtractor->GetOutputPort());
-    smoother->SetNumberOfIterations(15);
+    smoother->SetNumberOfIterations(smoothIter);   
     smoother->SetFeatureAngle(45);
-    smoother->SetRelaxationFactor(0.05);
+    smoother->SetRelaxationFactor(0.05); 
     smoother->Update();
+    
 
     vtkNew<vtkPolyDataMapper> skinMapper;
-    skinMapper->SetInputConnection(smoother->GetOutputPort());
+    skinMapper->SetInputConnection(skinExtractor->GetOutputPort());
     skinMapper->ScalarVisibilityOff();
   
     vtkNew<vtkActor> skin;

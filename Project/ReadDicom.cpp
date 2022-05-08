@@ -64,9 +64,9 @@ vtkNew<vtkImageData> ReadDicom::ReadCT(const std::string& pathToDicom)
     vtkStringArray* files_s = dicomDirectory->GetFileNamesForSeries(s_nbr);
     vtkNew<vtkDICOMReader> reader;
     reader->SetFileNames(dicomDirectory->GetFileNamesForSeries(s_nbr));
-    cout << dicomDirectory->GetFileNamesForSeries(s_nbr);
-    reader->Update();
+    //cout << dicomDirectory->GetFileNamesForSeries(s_nbr);
 
+    reader->Update();
     vtkNew<vtkImageData> rawVolumeData;
     rawVolumeData->DeepCopy(reader->GetOutput());
 
