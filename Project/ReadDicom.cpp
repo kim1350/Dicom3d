@@ -6,11 +6,11 @@
 #include "vtkStringArray.h"
 #include "vtkDICOMReader.h"
 #include <vtkSmoothPolyDataFilter.h>
+#include <vtkPolyDataConnectivityFilter.h>
 
-
+using namespace std;
 vtkNew<vtkImageData> ReadDicom::ReadCT(const std::string& pathToDicom)
 {
-    using namespace std;
     vtkNew<vtkDICOMDirectory> dicomDirectory;
 
     dicomDirectory->SetDirectoryName(pathToDicom.c_str());
@@ -71,6 +71,44 @@ vtkNew<vtkImageData> ReadDicom::ReadCT(const std::string& pathToDicom)
     rawVolumeData->DeepCopy(reader->GetOutput());
 
     return  rawVolumeData;
+}
+
+void ReadDicom::filterSmallObj(vtkSmartPointer<vtkPolyData> mesh, double ratio, vtkSmartPointer<vtkCallbackCommand> callback)
+{
+    
+    cout << "Remove small connected objects: Size ratio = " << fixed << setprecision(3) << ratio << endl;
+
+    vtkNew<vtkPolyDataConnectivityFilter> connectivityFilter ;
+
+    cout << connectivityFilter->GetClassName() <<" progress:" << endl;
+    /*
+    if (callback.Get() != NULL)
+    {
+        connectivityFilter->AddObserver(vtkCommand::ProgressEvent, callback);
+    }
+    */
+    connectivityFilter->SetInputData(mesh);
+    connectivityFilter->SetExtractionModeToAllRegions();
+    connectivityFilter->Update();
+    cout << "0.0%..";
+    // remove objects consisting of less than ratio vertexes of the biggest object
+    vtkIdTypeArray* regionSizes = connectivityFilter->GetRegionSizes();
+    long maxSize = 0;
+    for (int regions = 0; regions < connectivityFilter->GetNumberOfExtractedRegions(); regions++)
+        if (regionSizes->GetValue(regions) > maxSize)
+            maxSize = regionSizes->GetValue(regions);
+
+    cout << "50.0%..";
+    // append regions of sizes over the threshold
+    connectivityFilter->SetExtractionModeToSpecifiedRegions();
+    for (int regions = 0; regions < connectivityFilter->GetNumberOfExtractedRegions(); regions++)
+        if (regionSizes->GetValue(regions) > maxSize * ratio)
+            connectivityFilter->AddSpecifiedRegion(regions);
+    
+    connectivityFilter->Update();
+    mesh->DeepCopy(connectivityFilter->GetOutput());
+    cout << "100% done" << endl;
+    
 }
 
 

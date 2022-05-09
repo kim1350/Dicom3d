@@ -12,6 +12,6 @@ class ReadDicom
 	public:
 		vtkNew<vtkImageData> ReadCT(const std::string& pathToDicom);
 		
+		void filterSmallObj(vtkSmartPointer<vtkPolyData> mesh, double ratio, vtkSmartPointer<vtkCallbackCommand> callback);
 };
-
 

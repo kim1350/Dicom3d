@@ -1,5 +1,4 @@
-﻿#define _CRT_SECURE_NO_WARNINGS
-#ifndef INITIAL_OPENGL
+﻿#ifndef INITIAL_OPENGL
 #define INITIAL_OPENGL
 
 #include <vtkAutoInit.h>
@@ -37,8 +36,7 @@ void myVtkProgressCallback(vtkObject* caller, long unsigned int /*eventId*/, voi
     // display progress in terminal
     vtkAlgorithm* filter = static_cast<vtkAlgorithm*>(caller);
     if (filter->GetProgress() == 0) {
-        cout << filter->GetClassName() << " progress:"<<endl;
-        
+        cout << filter->GetClassName() << " progress:"<<endl;     
     }
     if (filter->GetProgress() > 0.999)
         cout << "100% done!"<<endl;
@@ -54,7 +52,7 @@ int main(int argc, char* argv[])
     if (argc < 4 or argv[0]=="-h")
     {
         cout << "Usage: " << argv[0] << endl;
-        cout << "Minimum example. Using a default iso value of 500 (shows bone)" << endl;
+        cout << "Minimum example:" << endl;
         cout << "project -p E:\\dicompath -o test.stl" << endl;
         cout << "1) -p path to Dicom directory"<<endl;
         cout << "2) -mv iso value main" << endl;
@@ -67,7 +65,7 @@ int main(int argc, char* argv[])
     }
 
     string path, filename;
-    int upValue = 0, mainValue = 500, smoothIter = 0;
+    int upValue = 0, mainValue = 0, smoothIter = 0;
     
 
     for (int a = 1; a < argc; a++)
@@ -168,8 +166,9 @@ int main(int argc, char* argv[])
     vtkNew<vtkRenderWindowInteractor> iren;
     iren->SetRenderWindow(renWin);
    
+   
 
-    if (upValue) {
+    if (upValue && mainValue) {
         vtkNew<vtkImageThreshold> imageThreshold;
         imageThreshold->SetInputData(reader);
         imageThreshold->ThresholdByUpper(upValue);
@@ -178,6 +177,8 @@ int main(int argc, char* argv[])
         imageThreshold->Update();
         reader->DeepCopy(imageThreshold->GetOutput());
     }
+    
+    
 
     vtkNew<vtkFlyingEdges3D> skinExtractor;
     if (m_vtkCallback.Get() != NULL)
@@ -185,22 +186,35 @@ int main(int argc, char* argv[])
         skinExtractor->AddObserver(vtkCommand::ProgressEvent, m_vtkCallback);
     }
     skinExtractor->SetInputData(reader);
-    skinExtractor->SetValue(0, mainValue);
-   
-    vtkNew<vtkSmoothPolyDataFilter> smoother;
-    if (m_vtkCallback.Get() != NULL)
+    if (mainValue)
     {
-        smoother->AddObserver(vtkCommand::ProgressEvent, m_vtkCallback);
+        skinExtractor->SetValue(0, mainValue);
     }
-    smoother->SetInputConnection(skinExtractor->GetOutputPort());
-    smoother->SetNumberOfIterations(smoothIter);   
-    smoother->SetFeatureAngle(45);
-    smoother->SetRelaxationFactor(0.05); 
-    smoother->Update();
-    
+    skinExtractor->Update();
+    vtkNew<vtkPolyData> polyData;
+    polyData->DeepCopy(skinExtractor->GetOutput());
+    skinExtractor->Delete();
 
+    ReadDicom filterR;
+    filterR.filterSmallObj(polyData, 0.005, m_vtkCallback);
+
+    if (smoothIter) {
+        vtkNew<vtkSmoothPolyDataFilter> smoother;
+        if (m_vtkCallback.Get() != NULL)
+        {
+            smoother->AddObserver(vtkCommand::ProgressEvent, m_vtkCallback);
+        }
+        smoother->SetInputData(polyData);
+        smoother->SetNumberOfIterations(smoothIter);
+        smoother->SetFeatureAngle(45);
+        smoother->SetRelaxationFactor(0.05);
+        smoother->Update();
+        polyData->DeepCopy(smoother->GetOutput());
+    }
+    
+    
     vtkNew<vtkPolyDataMapper> skinMapper;
-    skinMapper->SetInputConnection(skinExtractor->GetOutputPort());
+    skinMapper->SetInputData(polyData);
     skinMapper->ScalarVisibilityOff();
   
     vtkNew<vtkActor> skin;
