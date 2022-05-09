@@ -9,4 +9,7 @@
 - http://dgobbi.github.io/vtk-dicom/doc/vtk-dicom.pdf -http://dgobbi.github.io/vtk-dicom/
 - https://github.com/dgobbi/vtk-dicom
 
+![alt text](https://github.com/kim1350/Dicom3d/blob/main/img/terminal_example.png)
 ![alt text](https://github.com/kim1350/Dicom3d/blob/main/img/bone_example.png)
+![alt text](https://github.com/kim1350/Dicom3d/blob/main/img/example.png)
+![alt text](https://github.com/kim1350/Dicom3d/blob/main/img/example1.png)
